@@ -139,7 +139,44 @@ resource "azurerm_network_security_rule" "AllowRDPClient" {
 resource "azurerm_subnet_network_security_group_association" "tfaz-vnet1-subn1-assoc-dc-vm" {
   subnet_id                 = azurerm_subnet.tfaz-vnet1-subn1.id
   network_security_group_id = azurerm_network_security_group.tfaz-nsg-infra.id
+
+  tags = {
+    environment = var.env-tfaz-infra
+  }
+
 }
+
+###########################################################
+# Public IP
+###########################################################
+
+resource "azurerm_public_ip" "tfaz-pip-dc01" {
+  name                         = var.tfaz-dc01-pip
+  resource_group_name          = azurerm_resource_group.tfaz-rg-aad-rndmn.name
+  public_ip_address_allocation = "static"
+  location                     = var.tfaz-rg-loc
+}
+
+###########################################################
+# Network Interface 
+###########################################################
+
+resource "azurerm_network_interface" "tfaz-dc01-intf" {
+  name     = var.tfaz-dc01-pip
+  location = var.tfaz-rg-loc
+  tags = {
+    environment = var.env-tag-infra
+  }
+}
+
+
+###########################################################
+# 
+###########################################################
+
+###########################################################
+# 
+###########################################################
 
 ###########################################################
 # 

@@ -70,6 +70,16 @@ variable "tfaz-bnet11-subn2-range" {
   default = "10.10.2.0/24"
 }
 
+variable "tfaz-intface" {
+type = string
+default = "tfaz-dc01-intface"
+}
+
+
+variable "tfaz-pip-dc01" {
+  type = string
+  default = "tfaz-pip-dc01"
+}
 ################## NSG
 
 variable "tfaz-nsg-infra" {
