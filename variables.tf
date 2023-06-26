@@ -71,13 +71,13 @@ variable "tfaz-bnet11-subn2-range" {
 }
 
 variable "tfaz-intface" {
-type = string
-default = "tfaz-dc01-intface"
+  type    = string
+  default = "tfaz-dc01-intface"
 }
 
 
 variable "tfaz-pip-dc01" {
-  type = string
+  type    = string
   default = "tfaz-pip-dc01"
 }
 ################## NSG

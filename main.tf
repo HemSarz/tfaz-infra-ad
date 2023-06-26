@@ -30,6 +30,7 @@ resource "azurerm_storage_account" "tfaz-stg-infra" {
   tags = {
     environment = var.env-tag-infra
   }
+
 }
 
 resource "azurerm_storage_container" "tfaz-cont-infra" {
@@ -74,6 +75,7 @@ resource "azurerm_key_vault" "tfaz-kv-infra" {
 ###########################################################
 # SERVICE PRINCIPAL | APPLICATION (Default)
 ###########################################################
+
 resource "azuread_service_principal" "tfaz-spn-infra" {
   application_id = "2565bd9d-da50-47d4-8b85-4c97f669dc36"
 }
@@ -139,11 +141,6 @@ resource "azurerm_network_security_rule" "AllowRDPClient" {
 resource "azurerm_subnet_network_security_group_association" "tfaz-vnet1-subn1-assoc-dc-vm" {
   subnet_id                 = azurerm_subnet.tfaz-vnet1-subn1.id
   network_security_group_id = azurerm_network_security_group.tfaz-nsg-infra.id
-
-  tags = {
-    environment = var.env-tfaz-infra
-  }
-
 }
 
 ###########################################################
@@ -151,10 +148,10 @@ resource "azurerm_subnet_network_security_group_association" "tfaz-vnet1-subn1-a
 ###########################################################
 
 resource "azurerm_public_ip" "tfaz-pip-dc01" {
-  name                         = var.tfaz-dc01-pip
-  resource_group_name          = azurerm_resource_group.tfaz-rg-aad-rndmn.name
-  public_ip_address_allocation = "static"
-  location                     = var.tfaz-rg-loc
+  name                = var.tfaz-pip-dc01
+  allocation_method   = "Dynamic"
+  resource_group_name = azurerm_resource_group.tfaz-rg-aad.name
+  location            = var.tfaz-rg-loc
 }
 
 ###########################################################
@@ -162,8 +159,16 @@ resource "azurerm_public_ip" "tfaz-pip-dc01" {
 ###########################################################
 
 resource "azurerm_network_interface" "tfaz-dc01-intf" {
-  name     = var.tfaz-dc01-pip
-  location = var.tfaz-rg-loc
+  name                = var.tfaz-pip-dc01
+  location            = var.tfaz-rg-loc
+  resource_group_name = azurerm_resource_group.tfaz-rg-aad.name
+
+  ip_configuration {
+    name                          = "dc01-nic"
+    subnet_id                     = azurerm_subnet.tfaz-vnet1-subn1.id
+    private_ip_address_allocation = "Dynamic"
+  }
+
   tags = {
     environment = var.env-tag-infra
   }
@@ -173,6 +178,8 @@ resource "azurerm_network_interface" "tfaz-dc01-intf" {
 ###########################################################
 # 
 ###########################################################
+
+
 
 ###########################################################
 # 
