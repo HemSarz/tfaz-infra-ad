@@ -72,6 +72,13 @@ resource "azurerm_key_vault" "tfaz-kv-infra" {
 # KEY VAULT SECRET
 ###########################################################
 
+resource "azurerm_key_vault_secret" "vm-admin-pass" {
+  name         = "tfaz-vm-pass"
+  value        = random_password.tfaz-vm-pass.result
+  key_vault_id = azurerm_key_vault.tfaz-kv-infra.id
+  depends_on   = [azurerm_key_vault.tfaz-kv-infra]
+}
+
 ###########################################################
 # SERVICE PRINCIPAL | APPLICATION (Default)
 ###########################################################
@@ -166,28 +173,15 @@ resource "azurerm_network_interface" "tfaz-dc01-intf" {
   ip_configuration {
     name                          = "dc01-nic"
     subnet_id                     = azurerm_subnet.tfaz-vnet1-subn1.id
-    private_ip_address_allocation = "Dynamic"
+    private_ip_address_allocation = "Static"
+    private_ip_address            = var.tfaz-prvip-dc01-subnet1
+    public_ip_address_id          = azurerm_public_ip.tfaz-pip-dc01.id
   }
 
   tags = {
     environment = var.env-tag-infra
   }
 }
-
-
-###########################################################
-# 
-###########################################################
-
-
-
-###########################################################
-# 
-###########################################################
-
-###########################################################
-# 
-###########################################################
 
 ###########################################################
 # VM User | Pass | Group
@@ -216,6 +210,77 @@ resource "azuread_user" "VMAdminDC01" {
 # Domain Controller VM        
 ###########################################################
 
+resource "azurerm_windows_virtual_machine" "tfaz-dc01-vm" {
+  name                  = "dc01"
+  location              = var.tfaz-rg-loc
+  resource_group_name   = azurerm_resource_group.tfaz-rg-aad.name
+  network_interface_ids = [azurerm_network_interface.tfaz-dc01-intf.id]
+  size                  = "Standard_DS1_v2"
+  admin_username        = var.tfaz-VMAdmin
+  admin_password        = azurerm_key_vault_secret.vm-admin-pass.value
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "MicrosoftWindowsServer"
+    offer     = "WindowsServer"
+    sku       = "2016-Datacenter"
+    version   = "latest"
+  }
+
+  tags = {
+    environment = var.env-tag-infra
+  }
+
+}
+
 ###########################################################
 # DOmain Controller Data Disk
 ###########################################################
+
+resource "azurerm_managed_disk" "name" {
+  name                 = "dc01-data-disk"
+  location             = var.tfaz-rg-loc
+  resource_group_name  = azurerm_resource_group.tfaz-rg-aad.name
+  storage_account_type = "Standard_LRS"
+  create_option        = "Empty"
+  disk_size_gb         = "20"
+
+  tags = {
+    environment = var.env-tag-infra
+
+  }
+}
+
+###########################################################
+# Format Managed Disk
+###########################################################
+
+resource "azurerm_virtual_machine_extension" "dc01-ad" {
+  name                       = "dc01-ad-ps1"
+  virtual_machine_id         = azurerm_windows_virtual_machine.rgne1-vm01.id
+  depends_on                 = [azurerm_managed_disk.dc01-ntds]
+  publisher                  = "Microsoft.Compute"
+  type                       = "CustomScriptExtension"
+  type_handler_version       = "1.9"
+  auto_upgrade_minor_version = true
+
+  settings = <<SETTINGS
+  {
+    "commandToExecute": "powershell.exe -Command \"${local.powershell}\""
+  }
+  SETTINGS
+}
+
+locals {
+  generated_password = random_password.tfaz-vm-pass.result
+  cmd01              = "Get-Disk | Where partitionstyle -eq 'raw' | Initialize-Disk -PartitionStyle MBR -PassThru | New-Partition -UseMaximumSize -DriveLetter E | Format-Volume -FileSystem NTFS -NewFileSystemLabel 'data' -Confirm:$false"
+  cmd02              = "Install-WindowsFeature AD-Domain-Services -IncludeAllSubFeature -IncludeManagementTools"
+  cmd03              = "Install-WindowsFeature DNS -IncludeAllSubFeature -IncludeManagementTools"
+  cmd04              = "Import-Module ADDSDeployment, DnsServer"
+  cmd05              = "Install-ADDSForest -DomainName ${var.domain_name} -DomainNetbiosName ${var.domain_netbios_name} -DomainMode ${var.domain_mode} -ForestMode ${var.domain_mode} -DatabasePath ${var.database_path} -SysvolPath ${var.sysvol_path} -LogPath ${var.log_path} -NoRebootOnCompletion:$false -Force:$true -SafeModeAdministratorPassword (ConvertTo-SecureString ${local.generated_password} -AsPlainText -Force)"
+  powershell         = "${local.cmd01}; ${local.cmd02}; ${local.cmd03}; ${local.cmd04}; ${local.cmd05}"
+}

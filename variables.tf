@@ -55,6 +55,7 @@ variable "tfaz-vnet1-subn1-range" {
 }
 
 ########### SUBNET 2
+
 variable "tfaz-vnet1-subn2-name" {
   type    = string
   default = "10.10.2.0/24"
@@ -80,6 +81,11 @@ variable "tfaz-pip-dc01" {
   type    = string
   default = "tfaz-pip-dc01"
 }
+
+variable "tfaz-prvip-dc01-subnet1" {
+  type    = string
+  default = "10.10.1.10"
+}
 ################## NSG
 
 variable "tfaz-nsg-infra" {
@@ -100,9 +106,3 @@ variable "tfaz-VMAdmin" {
   type    = string
   default = "VMAdminDC01"
 }
-
-variable "tfaz-VMadminPass" {
-  type    = string
-  default = ""
-}
-
