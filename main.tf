@@ -210,11 +210,11 @@ resource "azuread_user" "VMAdminDC01" {
 ###########################################################
 
 resource "azurerm_windows_virtual_machine" "tfaz-dc01-vm" {
-  name                  = "dc01"
+  name                  = var.tfaz-dc01
   location              = var.tfaz-rg-loc
   resource_group_name   = azurerm_resource_group.tfaz-rg-aad.name
   network_interface_ids = [azurerm_network_interface.tfaz-dc01-intf.id]
-  size                  = "Standard_DS1_v2"
+  size                  = var.vm_size
   admin_username        = var.tfaz-VMAdmin
   admin_password        = azurerm_key_vault_secret.vm-admin-pass.value
 
@@ -233,7 +233,6 @@ resource "azurerm_windows_virtual_machine" "tfaz-dc01-vm" {
   tags = {
     environment = var.env-tag-infra
   }
-
 }
 
 ###########################################################
@@ -241,16 +240,15 @@ resource "azurerm_windows_virtual_machine" "tfaz-dc01-vm" {
 ###########################################################
 
 resource "azurerm_managed_disk" "dc01-ntds" {
-  name                 = "dc01-data-disk"
+  name                 = var.tfaz-dc01
   location             = var.tfaz-rg-loc
   resource_group_name  = azurerm_resource_group.tfaz-rg-aad.name
-  storage_account_type = "Standard_LRS"
+  storage_account_type = var.storage-acc-type
   create_option        = "Empty"
   disk_size_gb         = "20"
 
   tags = {
     environment = var.env-tag-infra
-
   }
 }
 

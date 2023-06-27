@@ -138,3 +138,26 @@ variable "log_path" {
   type    = string
   default = "E:/Windows/NTDS"
 }
+
+
+##### VM | Data Disk
+
+variable "tfaz-dc01" {
+  type    = string
+  default = "tfaz-dc01-infra"
+}
+
+variable "vm_size" {
+  type    = string
+  default = "Standard_DS1_v2"
+}
+
+variable "storage-acc-type" {
+  type    = string
+  default = "Standard_LRS"
+}
+
+variable "dc01-ntds" {
+  type    = string
+  default = "dc01-data-disk"
+}
