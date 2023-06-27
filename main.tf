@@ -140,7 +140,6 @@ resource "azurerm_network_security_rule" "AllowRDPClient" {
   network_security_group_name = azurerm_network_security_group.tfaz-nsg-infra.name
 }
 
-
 ###########################################################
 # NSG Association
 ###########################################################
@@ -241,7 +240,7 @@ resource "azurerm_windows_virtual_machine" "tfaz-dc01-vm" {
 # DOmain Controller Data Disk
 ###########################################################
 
-resource "azurerm_managed_disk" "name" {
+resource "azurerm_managed_disk" "dc01-ntds" {
   name                 = "dc01-data-disk"
   location             = var.tfaz-rg-loc
   resource_group_name  = azurerm_resource_group.tfaz-rg-aad.name
@@ -261,7 +260,7 @@ resource "azurerm_managed_disk" "name" {
 
 resource "azurerm_virtual_machine_extension" "dc01-ad" {
   name                       = "dc01-ad-ps1"
-  virtual_machine_id         = azurerm_windows_virtual_machine.rgne1-vm01.id
+  virtual_machine_id         = azurerm_windows_virtual_machine.tfaz-dc01-vm.id
   depends_on                 = [azurerm_managed_disk.dc01-ntds]
   publisher                  = "Microsoft.Compute"
   type                       = "CustomScriptExtension"

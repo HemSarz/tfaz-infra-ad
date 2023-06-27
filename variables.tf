@@ -106,3 +106,35 @@ variable "tfaz-VMAdmin" {
   type    = string
   default = "VMAdminDC01"
 }
+
+######### AD
+
+variable "domain_name" {
+  type    = string
+  default = "tfaz.local"
+}
+
+variable "domain_netbios_name" {
+  type    = string
+  default = "tfaz"
+}
+
+variable "domain_mode" {
+  type    = string
+  default = "WinThreshold"
+}
+
+variable "database_path" {
+  type    = string
+  default = "E:/Windows/NTDS"
+}
+
+variable "sysvol_path" {
+  type    = string
+  default = "E:/Windows/SYSVOL"
+}
+
+variable "log_path" {
+  type    = string
+  default = "E:/Windows/NTDS"
+}
