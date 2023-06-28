@@ -80,14 +80,6 @@ resource "azurerm_key_vault_secret" "vm-admin-pass" {
 }
 
 ###########################################################
-# SERVICE PRINCIPAL | APPLICATION (Default)
-###########################################################
-
-resource "azuread_service_principal" "tfaz-spn-infra" {
-  application_id = "2565bd9d-da50-47d4-8b85-4c97f669dc36"
-}
-
-###########################################################
 # VNET 1
 ###########################################################
 
