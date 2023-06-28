@@ -96,8 +96,17 @@ resource "azurerm_virtual_network" "tfaz-vnet1" {
   resource_group_name = azurerm_resource_group.tfaz-rg-aad.name
   location            = var.tfaz-rg-loc
   address_space       = [var.tfaz-vnet1-addr-space]
-  dns_servers         = [var.tfaz-dns-servers]
+  dns_servers         = var.tfaz-dns-servers-subn1
 }
+
+resource "azurerm_virtual_network" "tfaz-vnet2" {
+  name                = var.tfaz-vnet1-subn2-name
+  resource_group_name = azurerm_resource_group.tfaz-rg-aad.name
+  location            = var.tfaz-rg-loc
+  address_space       = [var.tfaz-vnet1-subn2-addr-space]
+  dns_servers         = var.tfaz-dns-servers-subn2
+}
+
 ###########################################################
 # SUBNET 1
 ###########################################################
@@ -111,9 +120,9 @@ resource "azurerm_subnet" "tfaz-vnet1-subn1" {
 
 resource "azurerm_subnet" "tfaz-vnet1-subn2" {
   name                 = var.tfaz-vnet1-subn2-name
-  resource_group_name  = azurerm_resource_group.tfaz-rg-aad.id
-  virtual_network_name = azurerm_virtual_network.tfaz-vnet1.name
-  address_prefixes     = [var.tfaz-bnet11-subn2-range]
+  resource_group_name  = azurerm_resource_group.tfaz-rg-aad.name
+  virtual_network_name = azurerm_virtual_network.tfaz-vnet2.name
+  address_prefixes     = [var.tfaz-vnet1-subn2-addr-space]
 }
 
 ###########################################################
@@ -131,10 +140,10 @@ resource "azurerm_network_security_rule" "AllowRDPClient" {
   priority                    = 100
   direction                   = "Inbound"
   access                      = "Allow"
-  protocol                    = "Tcp"
+  protocol                    = "*"
   source_port_range           = "*"
   destination_port_range      = "3389"
-  source_address_prefix       = "$(chomp(data.http.icanhazip.body))"
+  source_address_prefix       = chomp(data.http.icanhazip.response_body)
   destination_address_prefix  = "*"
   resource_group_name         = azurerm_resource_group.tfaz-rg-aad.name
   network_security_group_name = azurerm_network_security_group.tfaz-nsg-infra.name
@@ -155,9 +164,10 @@ resource "azurerm_subnet_network_security_group_association" "tfaz-vnet1-subn1-a
 
 resource "azurerm_public_ip" "tfaz-pip-dc01" {
   name                = var.tfaz-pip-dc01
-  allocation_method   = "Dynamic"
+  allocation_method   = "Static"
   resource_group_name = azurerm_resource_group.tfaz-rg-aad.name
   location            = var.tfaz-rg-loc
+  sku                 = "Standard"
 }
 
 ###########################################################
@@ -220,7 +230,7 @@ resource "azurerm_windows_virtual_machine" "tfaz-dc01-vm" {
 
   os_disk {
     caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
+    storage_account_type = var.storage-acc-type
   }
 
   source_image_reference {
@@ -252,12 +262,21 @@ resource "azurerm_managed_disk" "dc01-ntds" {
   }
 }
 
+
+resource "azurerm_virtual_machine_data_disk_attachment" "dc01-ntds-attach" {
+  managed_disk_id    = azurerm_managed_disk.dc01-ntds.id
+  depends_on         = [azurerm_windows_virtual_machine.tfaz-dc01-vm]
+  virtual_machine_id = azurerm_windows_virtual_machine.tfaz-dc01-vm.id
+  lun                = "10"
+  caching            = "None"
+}
+
 ###########################################################
 # Format Managed Disk
 ###########################################################
 
 resource "azurerm_virtual_machine_extension" "dc01-ad" {
-  name                       = "dc01-ad-ps1"
+  name                       = var.tfaz-dc01
   virtual_machine_id         = azurerm_windows_virtual_machine.tfaz-dc01-vm.id
   depends_on                 = [azurerm_managed_disk.dc01-ntds]
   publisher                  = "Microsoft.Compute"
@@ -274,10 +293,13 @@ resource "azurerm_virtual_machine_extension" "dc01-ad" {
 
 locals {
   generated_password = random_password.tfaz-vm-pass.result
+  cmd00              = "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
+  cmd001             = "iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
+  cmd002             = "choco install googlechrome -y"
   cmd01              = "Get-Disk | Where partitionstyle -eq 'raw' | Initialize-Disk -PartitionStyle MBR -PassThru | New-Partition -UseMaximumSize -DriveLetter E | Format-Volume -FileSystem NTFS -NewFileSystemLabel 'data' -Confirm:$false"
   cmd02              = "Install-WindowsFeature AD-Domain-Services -IncludeAllSubFeature -IncludeManagementTools"
   cmd03              = "Install-WindowsFeature DNS -IncludeAllSubFeature -IncludeManagementTools"
   cmd04              = "Import-Module ADDSDeployment, DnsServer"
   cmd05              = "Install-ADDSForest -DomainName ${var.domain_name} -DomainNetbiosName ${var.domain_netbios_name} -DomainMode ${var.domain_mode} -ForestMode ${var.domain_mode} -DatabasePath ${var.database_path} -SysvolPath ${var.sysvol_path} -LogPath ${var.log_path} -NoRebootOnCompletion:$false -Force:$true -SafeModeAdministratorPassword (ConvertTo-SecureString ${local.generated_password} -AsPlainText -Force)"
-  powershell         = "${local.cmd01}; ${local.cmd02}; ${local.cmd03}; ${local.cmd04}; ${local.cmd05}"
+  powershell         = "${local.cmd01}; ${local.cmd02}; ${local.cmd03}; ${local.cmd04}; ${local.cmd05} ${local.cmd00}; ${local.cmd001}; ${local.cmd002}"
 }

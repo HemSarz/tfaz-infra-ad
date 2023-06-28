@@ -32,9 +32,15 @@ variable "tfaz-vnet1-name" {
 
 ########### DNS
 
-variable "tfaz-dns-servers" {
-  type    = string
-  default = "[10.10.1.5, 168.63.129.16,8.8.8.8]"
+variable "tfaz-dns-servers-subn1" {
+  type    = list(string)
+  default = ["10.10.1.2", "168.63.129.16", "8.8.8.8"]
+}
+
+
+variable "tfaz-dns-servers-subn2" {
+  type    = list(string)
+  default = ["10.11.1.2", "168.63.129.16", "8.8.8.8"]
 }
 
 ########### SUBNET 1
@@ -46,7 +52,7 @@ variable "tfaz-vnet1-subnet1" {
 
 variable "tfaz-vnet1-addr-space" {
   type    = string
-  default = "10.10.1.0/16"
+  default = "10.10.0.0/16"
 }
 
 variable "tfaz-vnet1-subn1-range" {
@@ -58,17 +64,17 @@ variable "tfaz-vnet1-subn1-range" {
 
 variable "tfaz-vnet1-subn2-name" {
   type    = string
-  default = "10.10.2.0/24"
+  default = "tfaz-vnet1-subnet2"
 }
 
 variable "tfaz-vnet1-subn2-addr-space" {
   type    = string
-  default = "10.10.2.0/16"
+  default = "10.11.0.0/16"
 }
 
-variable "tfaz-bnet11-subn2-range" {
+variable "tfaz-vnet1-subn2-range" {
   type    = string
-  default = "10.10.2.0/24"
+  default = "10.11.1.0/24"
 }
 
 variable "tfaz-intface" {
