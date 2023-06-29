@@ -296,3 +296,34 @@ locals {
   cmd05              = "Install-ADDSForest -DomainName ${var.domain_name} -DomainNetbiosName ${var.domain_netbios_name} -DomainMode ${var.domain_mode} -ForestMode ${var.domain_mode} -DatabasePath ${var.database_path} -SysvolPath ${var.sysvol_path} -LogPath ${var.log_path} -NoRebootOnCompletion:$false -Force:$true -SafeModeAdministratorPassword (ConvertTo-SecureString ${local.generated_password} -AsPlainText -Force)"
   powershell         = "${local.cmd01}; ${local.cmd02}; ${local.cmd03}; ${local.cmd04}; ${local.cmd05}; ${local.cmd00}; ${local.cmd001}; ${local.cmd002}"
 }
+
+###########################################################
+# Use existing resources as BACKEND
+###########################################################
+
+provider "null" {
+  alias = "backend_setup"
+}
+
+resource "null_resource" "backend_setup" {
+  provisioner "local-exec" {
+    command = <<EOT
+      az login; az storage account show-connection-string --name ${azurerm_storage_account.tfaz-stg-infra.name} --resource-group ${azurerm_resource_group.tfaz-rg-aad.name} --query connectionString --output tsv > backend.tf
+      echo 'terraform {
+        backend "azurerm" {
+          storage_account_name = "${data.azurerm_storage_account.stg}"
+          container_name       = "${data.azurerm_storage_container.cont-name-bcknd}
+          key                  = "terraform.tfstate"
+          access_key           = "${data.azurerm_storage_account.stg.primary_access_key}"
+        }
+      }' >> backend.tf
+      ./run_terraform.sh
+    EOT
+  }
+
+  depends_on = [
+    azurerm_storage_account.tfaz-stg-infra,
+    azurerm_resource_group.tfaz-rg-aad,
+    azurerm_storage_container.tfaz-cont-infra,
+  ]
+}
