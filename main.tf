@@ -156,7 +156,7 @@ resource "azurerm_subnet_network_security_group_association" "tfaz-vnet1-subn1-a
 
 resource "azurerm_public_ip" "tfaz-pip-dc01" {
   name                = var.tfaz-pip-dc01
-  allocation_method   = "Static"
+  allocation_method   = "Dynamic"
   resource_group_name = azurerm_resource_group.tfaz-rg-aad.name
   location            = var.tfaz-rg-loc
   sku                 = "Standard"
@@ -283,6 +283,7 @@ resource "azurerm_virtual_machine_extension" "dc01-ad" {
   SETTINGS
 }
 
+
 locals {
   generated_password = random_password.tfaz-vm-pass.result
   cmd00              = "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
@@ -293,5 +294,5 @@ locals {
   cmd03              = "Install-WindowsFeature DNS -IncludeAllSubFeature -IncludeManagementTools"
   cmd04              = "Import-Module ADDSDeployment, DnsServer"
   cmd05              = "Install-ADDSForest -DomainName ${var.domain_name} -DomainNetbiosName ${var.domain_netbios_name} -DomainMode ${var.domain_mode} -ForestMode ${var.domain_mode} -DatabasePath ${var.database_path} -SysvolPath ${var.sysvol_path} -LogPath ${var.log_path} -NoRebootOnCompletion:$false -Force:$true -SafeModeAdministratorPassword (ConvertTo-SecureString ${local.generated_password} -AsPlainText -Force)"
-  powershell         = "${local.cmd01}; ${local.cmd02}; ${local.cmd03}; ${local.cmd04}; ${local.cmd05} ${local.cmd00}; ${local.cmd001}; ${local.cmd002}"
+  powershell         = "${local.cmd01}; ${local.cmd02}; ${local.cmd03}; ${local.cmd04}; ${local.cmd05}; ${local.cmd00}; ${local.cmd001}; ${local.cmd002}"
 }
