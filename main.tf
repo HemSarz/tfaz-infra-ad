@@ -82,7 +82,7 @@ resource "random_id" "tfaz-vm-admin-pass" {
   prefix      = var.tfaz-vm-pass
 }
 resource "azurerm_key_vault_secret" "vm-admin-pass" {
-  name         = random_id.tfaz-vm-admin-pass
+  name         = random_id.tfaz-vm-admin-pass.hex
   value        = random_password.tfaz-vm-pass.result
   key_vault_id = azurerm_key_vault.tfaz-kv-infra.id
   depends_on   = [azurerm_key_vault.tfaz-kv-infra]
