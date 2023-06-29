@@ -22,3 +22,9 @@ data "azurerm_storage_container" "cont-name-bcknd" {
   name                 = azurerm_storage_container.tfaz-cont-infra.name
   storage_account_name = azurerm_storage_account.tfaz-stg-infra.name
 }
+
+data "azuread_application" "tfazsp" {
+  display_name = azuread_application.tfazsp.display_name
+
+  depends_on = [azuread_application.tfazsp]
+}

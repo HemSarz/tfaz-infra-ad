@@ -80,6 +80,31 @@ resource "azurerm_key_vault_secret" "vm-admin-pass" {
 }
 
 ###########################################################
+# VM User | Pass | Group
+###########################################################
+
+resource "azuread_application" "tfazsp" {
+  display_name = var.tfaz-spn
+  owners       = [data.azuread_client_config.current.object_id]
+}
+
+resource "azuread_service_principal" "tfazsp" {
+  application_id = azuread_application.tfazsp.application_id
+  owners         = [data.azuread_client_config.current.object_id]
+}
+
+resource "azuread_application_password" "tfazsp" {
+  application_object_id = azuread_application.tfazsp.object_id
+}
+
+resource "azurerm_role_assignment" "main" {
+  principal_id         = azuread_service_principal.tfazsp.object_id
+  scope                = azurerm_key_vault.tfaz-kv-infra.id
+  role_definition_name = "Contributor"
+}
+
+
+###########################################################
 # VNET 1
 ###########################################################
 
@@ -308,15 +333,14 @@ provider "null" {
 resource "null_resource" "backend_setup" {
   provisioner "local-exec" {
     command = <<EOT
-      az login; az storage account show-connection-string --name ${azurerm_storage_account.tfaz-stg-infra.name} --resource-group ${azurerm_resource_group.tfaz-rg-aad.name} --query connectionString --output tsv > backend.tf
       echo 'terraform {
         backend "azurerm" {
-          storage_account_name = "${data.azurerm_storage_account.stg}"
-          container_name       = "${data.azurerm_storage_container.cont-name-bcknd}
+          storage_account_name = "${azurerm_storage_account.tfaz-stg-infra.name}"
+          container_name       = "${data.azurerm_storage_container.cont-name-bcknd.name}"
           key                  = "terraform.tfstate"
-          access_key           = "${data.azurerm_storage_account.stg.primary_access_key}"
+          access_key           = "${azurerm_storage_account.tfaz-stg-infra.primary_access_key}"
         }
-      }' >> backend.tf
+      }' > backend.tf
       ./run_terraform.sh
     EOT
   }

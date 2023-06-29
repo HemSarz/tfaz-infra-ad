@@ -167,3 +167,10 @@ variable "dc01-ntds" {
   type    = string
   default = "dc01-data-disk"
 }
+
+######## SPN
+
+variable "tfaz-spn" {
+  type    = string
+  default = "tfaz-spn-infra"
+}
