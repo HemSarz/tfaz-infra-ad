@@ -77,12 +77,12 @@ resource "azurerm_key_vault_access_policy" "tfaz-spn-apkv" {
 ###########################################################
 # KEY VAULT SECRET
 ###########################################################
-resource "random_id" "tfaz-vm-admin-pass" {
+resource "random_id" "tfaz-vm-pass-name" {
   byte_length = 3
-  prefix      = var.tfaz-vm-pass
+  prefix      = var.tfaz-vm-sc-name
 }
 resource "azurerm_key_vault_secret" "vm-admin-pass" {
-  name         = random_id.tfaz-vm-admin-pass.hex
+  name         = random_id.tfaz-vm-pass-name.hex
   value        = random_password.tfaz-vm-pass.result
   key_vault_id = azurerm_key_vault.tfaz-kv-infra.id
   depends_on   = [azurerm_key_vault.tfaz-kv-infra]
@@ -168,9 +168,8 @@ resource "azurerm_network_security_rule" "AllowRDPClient" {
   protocol                    = "*"
   source_port_range           = "*"
   destination_port_range      = "3389"
-  source_address_prefix       = chomp(data.http.icanhazip.response_body)
+  source_address_prefix       = "${chomp(data.http.clientip.response_body)}/32"
   destination_address_prefix  = "*"
-  resource_group_name         = azurerm_resource_group.tfaz-rg-aad.name
   network_security_group_name = azurerm_network_security_group.tfaz-nsg-infra.name
 }
 
@@ -218,12 +217,12 @@ resource "azurerm_network_interface" "tfaz-dc01-intf" {
 }
 
 ###########################################################
-# VM User | Pass | Group
+# VM User | Pass | Group 
 ###########################################################
 
 resource "random_password" "tfaz-vm-pass" {
   length  = 15
-  special = true
+  special = false
   upper   = true
   lower   = true
 }
@@ -236,9 +235,11 @@ resource "azuread_group" "tfaz-dc01-group" {
 
 resource "azuread_user" "VMAdminDC01" {
   user_principal_name = "VMAdminDC01@hemensarzalihotmail.onmicrosoft.com"
-  display_name        = "VMAdminDC01"
+  display_name        = var.tfaz-VMAdmin
   password            = random_password.tfaz-vm-pass.result
 }
+
+## Add role assignment for user
 
 ###########################################################
 # Domain Controller VM        

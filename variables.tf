@@ -118,6 +118,11 @@ variable "tfaz-vm-pass" {
   default = "tfazdc01"
 }
 
+variable "tfaz-vm-sc-name" {
+  type    = string
+  default = "tfaz-vm-pass-name"
+}
+
 ######### AD
 
 variable "domain_name" {
