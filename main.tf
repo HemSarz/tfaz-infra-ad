@@ -2,13 +2,8 @@
 # RESOURCE GROUP
 ###########################################################
 
-resource "random_id" "tfaz-rg-aad-rndmn" {
-  byte_length = 3
-  prefix      = var.tfaz-rg-infra-prefix
-}
-
 resource "azurerm_resource_group" "tfaz-rg-aad" {
-  name     = random_id.tfaz-rg-aad-rndmn.hex
+  name     = var.tfaz-rg-name
   location = var.tfaz-rg-loc
 
   tags = {
@@ -82,9 +77,12 @@ resource "azurerm_key_vault_access_policy" "tfaz-spn-apkv" {
 ###########################################################
 # KEY VAULT SECRET
 ###########################################################
-
+resource "random_id" "tfaz-vm-admin-pass" {
+  byte_length = 3
+  prefix      = var.tfaz-vm-pass
+}
 resource "azurerm_key_vault_secret" "vm-admin-pass" {
-  name         = "tfaz-vm-pass"
+  name         = random_id.tfaz-vm-admin-pass
   value        = random_password.tfaz-vm-pass.result
   key_vault_id = azurerm_key_vault.tfaz-kv-infra.id
   depends_on   = [azurerm_key_vault.tfaz-kv-infra]
@@ -191,7 +189,7 @@ resource "azurerm_subnet_network_security_group_association" "tfaz-vnet1-subn1-a
 
 resource "azurerm_public_ip" "tfaz-pip-dc01" {
   name                = var.tfaz-pip-dc01
-  allocation_method   = "Dynamic"
+  allocation_method   = "Static"
   resource_group_name = azurerm_resource_group.tfaz-rg-aad.name
   location            = var.tfaz-rg-loc
   sku                 = "Standard"

@@ -3,14 +3,14 @@ variable "tfaz-rg-loc" {
   default = "norwayeast"
 }
 
+variable "tfaz-rg-name" {
+  type    = string
+  default = "tfaz-rg-aad"
+}
+
 variable "env-tag-infra" {
   type    = string
   default = "tfaz-rg-infra"
-}
-
-variable "tfaz-rg-infra-prefix" {
-  type    = string
-  default = "tfaz-rg-aad"
 }
 
 variable "tfaz-stg-infra" {
@@ -111,6 +111,11 @@ variable "tfaz-kv-name" {
 variable "tfaz-VMAdmin" {
   type    = string
   default = "VMAdminDC01"
+}
+
+variable "tfaz-vm-pass" {
+  type    = string
+  default = "tfazdc01"
 }
 
 ######### AD
