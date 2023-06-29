@@ -68,6 +68,17 @@ resource "azurerm_key_vault" "tfaz-kv-infra" {
   }
 }
 
+resource "azurerm_key_vault_access_policy" "tfaz-spn-apkv" {
+  key_vault_id = azurerm_key_vault.tfaz-kv-infra.id
+  object_id    = azuread_application.tfazsp.object_id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  depends_on   = [azuread_application.tfazsp, azurerm_key_vault.tfaz-kv-infra]
+
+  key_permissions     = ["Get", "List", "Backup"]
+  secret_permissions  = ["Get", "List", "Set"]
+  storage_permissions = ["Get", "List", "Set"]
+}
+
 ###########################################################
 # KEY VAULT SECRET
 ###########################################################
@@ -80,7 +91,7 @@ resource "azurerm_key_vault_secret" "vm-admin-pass" {
 }
 
 ###########################################################
-# VM User | Pass | Group
+# SPN
 ###########################################################
 
 resource "azuread_application" "tfazsp" {
@@ -102,7 +113,6 @@ resource "azurerm_role_assignment" "main" {
   scope                = azurerm_key_vault.tfaz-kv-infra.id
   role_definition_name = "Contributor"
 }
-
 
 ###########################################################
 # VNET 1
