@@ -6,14 +6,14 @@ data "http" "clientip" {
 }
 
 
-data "azurerm_storage_account" "stg" {
+data "azurerm_storage_account" "tfaz-stg-infra" {
   name                = azurerm_storage_account.tfaz-stg-infra.name
   resource_group_name = azurerm_resource_group.tfaz-rg-aad.name
   depends_on          = [azurerm_storage_account.tfaz-stg-infra]
 }
 
 output "STGPass" {
-  value     = data.azurerm_storage_account.stg.primary_access_key
+  value     = data.azurerm_storage_account.tfaz-stg-infra.primary_access_key
   sensitive = true
 }
 
@@ -24,7 +24,7 @@ data "azurerm_storage_container" "cont-name-bcknd" {
 }
 
 data "azuread_application" "tfazsp" {
-  display_name = azuread_application.tfazsp.display_name
+  display_name = var.tfaz-spn
 
   depends_on = [azuread_application.tfazsp]
 }

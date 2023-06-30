@@ -97,7 +97,7 @@ resource "azuread_application" "tfazsp" {
   owners       = [data.azuread_client_config.current.object_id]
 }
 
-resource "azuread_service_principal" "tfazsp" {
+resource "azuread_service_principal" "tfaz-spn" {
   application_id = azuread_application.tfazsp.application_id
   owners         = [data.azuread_client_config.current.object_id]
 }
@@ -107,7 +107,7 @@ resource "azuread_application_password" "tfazsp" {
 }
 
 resource "azurerm_role_assignment" "main" {
-  principal_id         = azuread_service_principal.tfazsp.object_id
+  principal_id         = azuread_service_principal.tfaz-spn.object_id
   scope                = azurerm_key_vault.tfaz-kv-infra.id
   role_definition_name = "Contributor"
 }
@@ -168,9 +168,10 @@ resource "azurerm_network_security_rule" "AllowRDPClient" {
   protocol                    = "*"
   source_port_range           = "*"
   destination_port_range      = "3389"
-  source_address_prefix       = "${chomp(data.http.clientip.response_body)}/32"
+  source_address_prefix       = "${chomp(data.http.clientip.response_body)}"
   destination_address_prefix  = "*"
   network_security_group_name = azurerm_network_security_group.tfaz-nsg-infra.name
+  resource_group_name         = azurerm_resource_group.tfaz-rg-aad.name
 }
 
 ###########################################################
@@ -221,10 +222,11 @@ resource "azurerm_network_interface" "tfaz-dc01-intf" {
 ###########################################################
 
 resource "random_password" "tfaz-vm-pass" {
-  length  = 15
-  special = false
+  length  = 12
+  special = true
   upper   = true
   lower   = true
+  numeric = true 
 }
 
 resource "azuread_group" "tfaz-dc01-group" {
@@ -291,7 +293,7 @@ resource "azurerm_managed_disk" "dc01-ntds" {
 
 resource "azurerm_virtual_machine_data_disk_attachment" "dc01-ntds-attach" {
   managed_disk_id    = azurerm_managed_disk.dc01-ntds.id
-  depends_on         = [azurerm_windows_virtual_machine.tfaz-dc01-vm]
+  depends_on         = [azurerm_windows_virtual_machine.tfaz-dc01-vm, azurerm_managed_disk.dc01-ntds]
   virtual_machine_id = azurerm_windows_virtual_machine.tfaz-dc01-vm.id
   lun                = "10"
   caching            = "None"
@@ -320,15 +322,16 @@ resource "azurerm_virtual_machine_extension" "dc01-ad" {
 
 locals {
   generated_password = random_password.tfaz-vm-pass.result
-  cmd00              = "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
-  cmd001             = "iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
-  cmd002             = "choco install googlechrome -y"
-  cmd01              = "Get-Disk | Where partitionstyle -eq 'raw' | Initialize-Disk -PartitionStyle MBR -PassThru | New-Partition -UseMaximumSize -DriveLetter E | Format-Volume -FileSystem NTFS -NewFileSystemLabel 'data' -Confirm:$false"
-  cmd02              = "Install-WindowsFeature AD-Domain-Services -IncludeAllSubFeature -IncludeManagementTools"
-  cmd03              = "Install-WindowsFeature DNS -IncludeAllSubFeature -IncludeManagementTools"
-  cmd04              = "Import-Module ADDSDeployment, DnsServer"
-  cmd05              = "Install-ADDSForest -DomainName ${var.domain_name} -DomainNetbiosName ${var.domain_netbios_name} -DomainMode ${var.domain_mode} -ForestMode ${var.domain_mode} -DatabasePath ${var.database_path} -SysvolPath ${var.sysvol_path} -LogPath ${var.log_path} -NoRebootOnCompletion:$false -Force:$true -SafeModeAdministratorPassword (ConvertTo-SecureString ${local.generated_password} -AsPlainText -Force)"
-  powershell         = "${local.cmd01}; ${local.cmd02}; ${local.cmd03}; ${local.cmd04}; ${local.cmd05}; ${local.cmd00}; ${local.cmd001}; ${local.cmd002}"
+  cmd01              = "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
+  cmd02              = "iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
+  cmd03              = "choco install dotnetfx --pre -y"
+  cmd04              = "choco install googlechrome -y"
+  cmd05              = "Get-Disk | Where partitionstyle -eq 'raw' | Initialize-Disk -PartitionStyle MBR -PassThru | New-Partition -UseMaximumSize -DriveLetter E | Format-Volume -FileSystem NTFS -NewFileSystemLabel 'data' -Confirm:$false"
+  cmd06              = "Install-WindowsFeature AD-Domain-Services -IncludeAllSubFeature -IncludeManagementTools"
+  cmd07              = "Install-WindowsFeature DNS -IncludeAllSubFeature -IncludeManagementTools"
+  cmd08              = "Import-Module ADDSDeployment, DnsServer"
+  cmd09              = "Install-ADDSForest -DomainName ${var.domain_name} -DomainNetbiosName ${var.domain_netbios_name} -DomainMode ${var.domain_mode} -ForestMode ${var.domain_mode} -DatabasePath ${var.database_path} -SysvolPath ${var.sysvol_path} -LogPath ${var.log_path} -NoRebootOnCompletion:$false -Force:$true -SafeModeAdministratorPassword (ConvertTo-SecureString ${local.generated_password} -AsPlainText -Force)"
+  powershell         = "${local.cmd01}; ${local.cmd02}; ${local.cmd03}; ${local.cmd04}; ${local.cmd05}; ${local.cmd06}; ${local.cmd07}; ${local.cmd08}; ${local.cmd09}"
 }
 
 ###########################################################
@@ -345,7 +348,7 @@ resource "null_resource" "backend_setup" {
       echo 'terraform {
         backend "azurerm" {
           storage_account_name = "${azurerm_storage_account.tfaz-stg-infra.name}"
-          container_name       = "${data.azurerm_storage_container.cont-name-bcknd.name}"
+          container_name       = "${azurerm_storage_container.tfaz-cont-infra.name}"
           key                  = "terraform.tfstate"
           access_key           = "${azurerm_storage_account.tfaz-stg-infra.primary_access_key}"
         }
