@@ -142,17 +142,17 @@ variable "domain_mode" {
 
 variable "database_path" {
   type    = string
-  default = "E:/Windows/NTDS"
+  default = "H:/Windows/NTDS"
 }
 
 variable "sysvol_path" {
   type    = string
-  default = "E:/Windows/SYSVOL"
+  default = "H:/Windows/SYSVOL"
 }
 
 variable "log_path" {
   type    = string
-  default = "E:/Windows/NTDS"
+  default = "H:/Windows/NTDS"
 }
 
 
@@ -160,7 +160,7 @@ variable "log_path" {
 
 variable "tfaz-dc01" {
   type    = string
-  default = "tfaz-dc01-infra"
+  default = "tfaz-dc01"
 }
 
 variable "vm_size" {
@@ -174,6 +174,11 @@ variable "storage-acc-type" {
 }
 
 variable "dc01-ntds" {
+  type    = string
+  default = "dc01-data-disk"
+}
+
+variable "vm-exten-dc01-ntds" {
   type    = string
   default = "dc01-data-disk"
 }

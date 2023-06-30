@@ -2,7 +2,7 @@ data "azurerm_client_config" "current" {}
 data "azuread_client_config" "current" {}
 
 data "http" "clientip" {
-  url = "http://icanhazip.com"
+  url = "https://ipv4.icanhazip.com/"
 }
 
 

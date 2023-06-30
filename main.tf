@@ -168,7 +168,7 @@ resource "azurerm_network_security_rule" "AllowRDPClient" {
   protocol                    = "*"
   source_port_range           = "*"
   destination_port_range      = "3389"
-  source_address_prefix       = chomp(data.http.clientip.response_body)
+  source_address_prefix       = "${chomp(data.http.clientip.response_body)}/32"
   destination_address_prefix  = "*"
   network_security_group_name = azurerm_network_security_group.tfaz-nsg-infra.name
   resource_group_name         = azurerm_resource_group.tfaz-rg-aad.name
@@ -303,8 +303,8 @@ resource "azurerm_virtual_machine_data_disk_attachment" "dc01-ntds-attach" {
 # Format Managed Disk
 ###########################################################
 
-resource "azurerm_virtual_machine_extension" "dc01-ad" {
-  name                       = var.tfaz-dc01
+resource "azurerm_virtual_machine_extension" "dc01-ad-exten" {
+  name                       = var.vm-exten-dc01-ntds
   virtual_machine_id         = azurerm_windows_virtual_machine.tfaz-dc01-vm.id
   depends_on                 = [azurerm_managed_disk.dc01-ntds]
   publisher                  = "Microsoft.Compute"
@@ -319,20 +319,17 @@ resource "azurerm_virtual_machine_extension" "dc01-ad" {
   SETTINGS
 }
 
-
 locals {
   generated_password = random_password.tfaz-vm-pass.result
-  cmd01              = "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
-  cmd02              = "Start-Process -Wait -FilePath 'https://dotnet.microsoft.com/download/dotnet-framework/thank-you/net48-developer-pack-offline-installer'"
-  cmd03              = "iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1')); choco install googlechrome -y"
-  cmd04              = "Get-Disk | Where partitionstyle -eq 'raw' | Initialize-Disk -PartitionStyle MBR -PassThru | New-Partition -UseMaximumSize -DriveLetter E | Format-Volume -FileSystem NTFS -NewFileSystemLabel 'data' -Confirm:$false"
-  cmd05              = "Install-WindowsFeature AD-Domain-Services -IncludeAllSubFeature -IncludeManagementTools"
-  cmd06              = "Install-WindowsFeature DNS -IncludeAllSubFeature -IncludeManagementTools"
-  cmd07              = "Import-Module ADDSDeployment, DnsServer"
-  cmd08              = "Install-ADDSForest -DomainName ${var.domain_name} -DomainNetbiosName ${var.domain_netbios_name} -DomainMode ${var.domain_mode} -ForestMode ${var.domain_mode} -DatabasePath ${var.database_path} -SysvolPath ${var.sysvol_path} -LogPath ${var.log_path} -NoRebootOnCompletion:$false -Force:$true -SafeModeAdministratorPassword (ConvertTo-SecureString ${local.generated_password} -AsPlainText -Force)"
-  powershell         = "${local.cmd01}; ${local.cmd02}; ${local.cmd03}; ${local.cmd04}; ${local.cmd05}; ${local.cmd06}; ${local.cmd07}; ${local.cmd08}"
+  cmd01              = "Get-Disk | Where partitionstyle -eq 'raw' | Initialize-Disk -PartitionStyle MBR -PassThru | New-Partition -UseMaximumSize -DriveLetter E | Format-Volume -FileSystem NTFS -NewFileSystemLabel 'data' -Confirm:$false"
+  cmd02              = "Install-WindowsFeature AD-Domain-Services -IncludeAllSubFeature -IncludeManagementTools"
+  cmd03              = "Install-WindowsFeature DNS -IncludeAllSubFeature -IncludeManagementTools"
+  cmd04              = "Import-Module ADDSDeployment, DnsServer"
+  cmd05              = "Install-ADDSForest -DomainName ${var.domain_name} -DomainNetbiosName ${var.domain_netbios_name} -DomainMode ${var.domain_mode} -ForestMode ${var.domain_mode} -DatabasePath ${var.database_path} -SysvolPath ${var.sysvol_path} -LogPath ${var.log_path} -NoRebootOnCompletion:$false -Force:$true -SafeModeAdministratorPassword (ConvertTo-SecureString ${local.generated_password} -AsPlainText -Force)"
+  powershell         = "${local.cmd01}; ${local.cmd02}; ${local.cmd03}; ${local.cmd04}; ${local.cmd05}"
 }
 
+#cmd06               = Invoke-WebRequest -Uri "https://dotnet.microsoft.com/download/dotnet-framework/thank-you/net48-web-installer" -OutFile "dotnet_installer.exe"; Start-Process -Wait -FilePath "dotnet_installer.exe"
 ###########################################################
 # Use existing resources as BACKEND
 ###########################################################
