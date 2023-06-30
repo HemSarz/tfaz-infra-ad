@@ -341,10 +341,6 @@ locals {
 # Use existing resources as BACKEND
 ###########################################################
 
-provider "null" {
-  alias = "backend_setup"
-}
-
 resource "null_resource" "backend_setup" {
   provisioner "local-exec" {
     command = <<EOT
@@ -359,9 +355,10 @@ terraform {
 }
 '@
 
-Set-Content -Path "backend.tf" -Value $backendConfig
+Set-Content -Path "${path.module}/backend.tf" -Value $backendConfig
 
-powershell.exe -ExecutionPolicy Bypass -File .\init-apply-tf.ps1
+Write-Host "Executing init-apply-tf.ps1 script..."
+powershell.exe -ExecutionPolicy Bypass -File "${path.module}/init-apply-tf.ps1"
     EOT
 
     interpreter = ["PowerShell", "-Command"]

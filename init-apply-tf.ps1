@@ -1,5 +1,5 @@
-# Run `terraform init` to initialize the backend
+Write-Host "Initializing the backend..."
 terraform init
 
-# Run `terraform apply` to create or modify the infrastructure
+Write-Host "Creating or modifying the infrastructure | Add backend"
 terraform apply -auto-approve
