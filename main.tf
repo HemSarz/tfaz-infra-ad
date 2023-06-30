@@ -359,6 +359,7 @@ Set-Content -Path "${path.module}/backend.tf" -Value $backendConfig
 
 Write-Host "Executing init-apply-tf.ps1 script..."
 powershell.exe -ExecutionPolicy Bypass -File "${path.module}/init-apply-tf.ps1"
+Write-Host "Terraform initialization and apply completed successfully."
     EOT
 
     interpreter = ["PowerShell", "-Command"]
