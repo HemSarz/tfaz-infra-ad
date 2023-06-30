@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Run `terraform init` to initialize the backend
 terraform init
 
