@@ -222,11 +222,12 @@ resource "azurerm_network_interface" "tfaz-dc01-intf" {
 ###########################################################
 
 resource "random_password" "tfaz-vm-pass" {
-  length  = 12
-  special = true
-  upper   = true
-  lower   = true
-  numeric = true
+  length           = 12
+  special          = true
+  upper            = true
+  lower            = true
+  numeric          = true
+  override_special = "_%@!#$"
 }
 
 resource "azuread_group" "tfaz-dc01-group" {
@@ -241,7 +242,14 @@ resource "azuread_user" "VMAdminDC01" {
   password            = random_password.tfaz-vm-pass.result
 }
 
-## Add role assignment for user
+resource "azuread_directory_role" "GLBLAdmin" {
+  display_name = "Global Administrator"
+}
+
+resource "azuread_directory_role_assignment" "sp_directory_role_assignment" {
+  role_id             = azuread_directory_role.GLBLAdmin.template_id
+  principal_object_id = azuread_user.VMAdminDC01.object_id
+}
 
 ###########################################################
 # Domain Controller VM        
@@ -253,7 +261,7 @@ resource "azurerm_windows_virtual_machine" "tfaz-dc01-vm" {
   resource_group_name   = azurerm_resource_group.tfaz-rg-aad.name
   network_interface_ids = [azurerm_network_interface.tfaz-dc01-intf.id]
   size                  = var.vm_size
-  admin_username        = var.tfaz-VMAdmin
+  admin_username        = azuread_user.VMAdminDC01.display_name
   admin_password        = azurerm_key_vault_secret.vm-admin-pass.value
 
   os_disk {
@@ -264,7 +272,7 @@ resource "azurerm_windows_virtual_machine" "tfaz-dc01-vm" {
   source_image_reference {
     publisher = "MicrosoftWindowsServer"
     offer     = "WindowsServer"
-    sku       = "2016-Datacenter"
+    sku       = "2019-Datacenter"
     version   = "latest"
   }
 
@@ -321,7 +329,7 @@ resource "azurerm_virtual_machine_extension" "dc01-ad-exten" {
 
 locals {
   generated_password = random_password.tfaz-vm-pass.result
-  cmd01              = "Get-Disk | Where partitionstyle -eq 'raw' | Initialize-Disk -PartitionStyle MBR -PassThru | New-Partition -UseMaximumSize -DriveLetter E | Format-Volume -FileSystem NTFS -NewFileSystemLabel 'data' -Confirm:$false"
+  cmd01              = "Get-Disk | Where partitionstyle -eq 'raw' | Initialize-Disk -PartitionStyle MBR -PassThru | New-Partition -UseMaximumSize -DriveLetter H | Format-Volume -FileSystem NTFS -NewFileSystemLabel 'data' -Confirm:$false"
   cmd02              = "Install-WindowsFeature AD-Domain-Services -IncludeAllSubFeature -IncludeManagementTools"
   cmd03              = "Install-WindowsFeature DNS -IncludeAllSubFeature -IncludeManagementTools"
   cmd04              = "Import-Module ADDSDeployment, DnsServer"
@@ -329,7 +337,6 @@ locals {
   powershell         = "${local.cmd01}; ${local.cmd02}; ${local.cmd03}; ${local.cmd04}; ${local.cmd05}"
 }
 
-#cmd06               = Invoke-WebRequest -Uri "https://dotnet.microsoft.com/download/dotnet-framework/thank-you/net48-web-installer" -OutFile "dotnet_installer.exe"; Start-Process -Wait -FilePath "dotnet_installer.exe"
 ###########################################################
 # Use existing resources as BACKEND
 ###########################################################
