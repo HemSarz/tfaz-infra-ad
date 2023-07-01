@@ -358,14 +358,14 @@ terraform {
 
 Set-Content -Path "${path.module}/backend.tf" -Value $backendConfig
     EOT
-
-    depends_on = [
-      azurerm_storage_account.tfaz-stg-infra,
-      azurerm_resource_group.tfaz-rg-aad,
-      azurerm_storage_container.tfaz-cont-infra,
-      azurerm_virtual_machine_extension.dc01-ad-exten,
-    ]
   }
+
+  depends_on = [
+    azurerm_storage_account.tfaz-stg-infra,
+    azurerm_resource_group.tfaz-rg-aad,
+    azurerm_storage_container.tfaz-cont-infra,
+    azurerm_virtual_machine_extension.dc01-ad-exten,
+  ]
 }
 
 output "backend_access_key" {
