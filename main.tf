@@ -357,9 +357,6 @@ resource "null_resource" "backend_setup" {
       '@
 
       Set-Content -Path "${path.module}/backend.tf" -Value $backendConfig
-
-      terraform init -input=false
-      terraform apply -auto-approve
     EOT
 
     interpreter = ["PowerShell", "-Command"]
