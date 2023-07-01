@@ -346,18 +346,23 @@ resource "null_resource" "backend_setup" {
   provisioner "local-exec" {
     command = <<-EOT
       $backendConfig = @'
-terraform {
-  backend "azurerm" {
-    storage_account_name = "${azurerm_storage_account.tfaz-stg-infra.name}"
-    container_name       = "${azurerm_storage_container.tfaz-cont-infra.name}"
-    key                  = "terraform.tfstate"
-    access_key           = "${azurerm_storage_account.tfaz-stg-infra.primary_access_key}"
-  }
-}
-'@
+      terraform {
+        backend "azurerm" {
+          storage_account_name = "${azurerm_storage_account.tfaz-stg-infra.name}"
+          container_name       = "${azurerm_storage_container.tfaz-cont-infra.name}"
+          key                  = "terraform.tfstate"
+          access_key           = "${azurerm_storage_account.tfaz-stg-infra.primary_access_key}"
+        }
+      }
+      '@
 
-Set-Content -Path "${path.module}/backend.tf" -Value $backendConfig
+      Set-Content -Path "${path.module}/backend.tf" -Value $backendConfig
+
+      terraform init -input=false
+      terraform apply -auto-approve
     EOT
+
+    interpreter = ["PowerShell", "-Command"]
   }
 
   depends_on = [
@@ -371,15 +376,4 @@ Set-Content -Path "${path.module}/backend.tf" -Value $backendConfig
 output "backend_access_key" {
   value     = azurerm_storage_account.tfaz-stg-infra.primary_access_key
   sensitive = true
-}
-
-resource "null_resource" "init_backend" {
-  provisioner "local-exec" {
-    command     = "powershell.exe -ExecutionPolicy Bypass -File init-apply-tf.ps1"
-    working_dir = "${path.module}/tfaz-infra-ad"
-  }
-
-  depends_on = [
-    null_resource.backend_setup
-  ]
 }
