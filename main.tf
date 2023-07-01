@@ -357,13 +357,8 @@ terraform {
 '@
 
 Set-Content -Path "${path.module}/backend.tf" -Value $backendConfig
-
-powershell.exe -ExecutionPolicy Bypass -File "tfaz-infra-ad/init-apply-tf.ps1"
     EOT
-
-    interpreter = ["PowerShell", "-Command"]
-  }
-
+    
   depends_on = [
     azurerm_storage_account.tfaz-stg-infra,
     azurerm_resource_group.tfaz-rg-aad,
@@ -375,4 +370,15 @@ powershell.exe -ExecutionPolicy Bypass -File "tfaz-infra-ad/init-apply-tf.ps1"
 output "backend_access_key" {
   value     = azurerm_storage_account.tfaz-stg-infra.primary_access_key
   sensitive = true
+}
+
+resource "null_resource" "init_backend" {
+  provisioner "local-exec" {
+    command     = "powershell.exe -ExecutionPolicy Bypass -File init-apply-tf.ps1"
+    working_dir = "${path.module}/tfaz-infra-ad"
+  }
+
+  depends_on = [
+    null_resource.backend_setup
+  ]
 }
