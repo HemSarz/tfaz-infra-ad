@@ -32,6 +32,7 @@ resource "azurerm_storage_container" "tfaz-cont-infra" {
   name                  = var.tfaz-stg-cont
   storage_account_name  = azurerm_storage_account.tfaz-stg-infra.name
   container_access_type = "private"
+  depends_on            = [azurerm_storage_account.tfaz-stg-infra]
 }
 
 ###########################################################
@@ -314,7 +315,7 @@ resource "azurerm_virtual_machine_data_disk_attachment" "dc01-ntds-attach" {
 resource "azurerm_virtual_machine_extension" "dc01-ad-exten" {
   name                       = var.vm-exten-dc01-ntds
   virtual_machine_id         = azurerm_windows_virtual_machine.tfaz-dc01-vm.id
-  depends_on                 = [azurerm_managed_disk.dc01-ntds]
+  depends_on                 = [azurerm_virtual_machine_data_disk_attachment.dc01-ntds-attach, azurerm_storage_container.tfaz-cont-infra]
   publisher                  = "Microsoft.Compute"
   type                       = "CustomScriptExtension"
   type_handler_version       = "1.9"
@@ -343,24 +344,21 @@ locals {
 
 resource "null_resource" "backend_setup" {
   provisioner "local-exec" {
-    command = <<EOT
+    command = <<-EOT
       $backendConfig = @'
 terraform {
   backend "azurerm" {
     storage_account_name = "${azurerm_storage_account.tfaz-stg-infra.name}"
     container_name       = "${azurerm_storage_container.tfaz-cont-infra.name}"
     key                  = "terraform.tfstate"
-    access_key           = ""
+    access_key           = "${azurerm_storage_account.tfaz-stg-infra.primary_access_key}"
   }
 }
 '@
 
-$backendConfig = $backendConfig -replace 'access_key\s*=\s*""', 'access_key = "${azurerm_storage_account.tfaz-stg-infra.primary_access_key}"'
 Set-Content -Path "${path.module}/backend.tf" -Value $backendConfig
 
-Write-Host "Executing init-apply-tf.ps1 script..."
-powershell.exe -ExecutionPolicy Bypass -File "${path.module}/init-apply-tf.ps1"
-Write-Host "Terraform initialization and apply completed successfully."
+powershell.exe -ExecutionPolicy Bypass -File "tfaz-infra-ad/init-apply-tf.ps1"
     EOT
 
     interpreter = ["PowerShell", "-Command"]
